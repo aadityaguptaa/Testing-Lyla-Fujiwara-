@@ -29,15 +29,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.*
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * Concrete implementation to load tasks from the data sources into a cache.
  */
-class DefaultTasksRepository private constructor(application: Application) {
+class DefaultTasksRepository constructor(private val tasksRemoteDataSource: TasksDataSource,
+                                                 private val tasksLocalDataSource: TasksDataSource,
+                                                 private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO) {
 
-    private val tasksRemoteDataSource: TasksDataSource
-    private val tasksLocalDataSource: TasksDataSource
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     companion object {
         @Volatile
@@ -45,21 +46,18 @@ class DefaultTasksRepository private constructor(application: Application) {
 
         fun getRepository(app: Application): DefaultTasksRepository {
             return INSTANCE ?: synchronized(this) {
-                DefaultTasksRepository(app).also {
+                val database = Room.databaseBuilder(app,
+                    ToDoDatabase::class.java, "Tasks.db"
+                ).build()
+
+                DefaultTasksRepository(TasksRemoteDataSource, TasksLocalDataSource(database.taskDao())).also {
                     INSTANCE = it
                 }
             }
         }
     }
 
-    init {
-        val database = Room.databaseBuilder(application.applicationContext,
-            ToDoDatabase::class.java, "Tasks.db")
-            .build()
 
-        tasksRemoteDataSource = TasksRemoteDataSource
-        tasksLocalDataSource = TasksLocalDataSource(database.taskDao())
-    }
 
     suspend fun getTasks(forceUpdate: Boolean = false): Result<List<Task>> {
         if (forceUpdate) {
@@ -91,7 +89,7 @@ class DefaultTasksRepository private constructor(application: Application) {
             // Real apps might want to do a proper sync.
             tasksLocalDataSource.deleteAllTasks()
             remoteTasks.data.forEach { task ->
-                tasksLocalDataSource.saveTask(task)
+                tasksLocalDataSource.saveTask(task = task)
             }
         } else if (remoteTasks is Result.Error) {
             throw remoteTasks.exception
