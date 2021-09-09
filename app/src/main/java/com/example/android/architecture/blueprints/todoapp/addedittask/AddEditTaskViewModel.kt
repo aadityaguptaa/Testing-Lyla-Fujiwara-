@@ -77,7 +77,7 @@ class AddEditTaskViewModel(application: Application) : AndroidViewModel(applicat
         _dataLoading.value = true
 
         viewModelScope.launch {
-            tasksRepository.getTask(taskId).let { result ->
+            tasksRepository.getTask(taskId, true).let { result ->
                 if (result is Success) {
                     onTaskLoaded(result.data)
                 } else {

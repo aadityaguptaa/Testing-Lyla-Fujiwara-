@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.android.architecture.blueprints.todoapp.Event
+import com.example.android.architecture.blueprints.todoapp.data.Task
+import com.example.android.architecture.blueprints.todoapp.data.source.FakeTestRepository
 import com.getOrAwaitValue
 import org.apache.tools.ant.taskdefs.Tstamp
 import org.hamcrest.CoreMatchers.*
@@ -16,9 +18,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.*
 
-@RunWith(AndroidJUnit4::class)
 class TasksViewModelTest{
 
+    private lateinit var tasksRepository: FakeTestRepository
 
     /*
      learn how to properly test live data
@@ -40,7 +42,13 @@ class TasksViewModelTest{
     lateinit var taskViewModel: TasksViewModel
     @Before
     fun setupViewModel(){
-        taskViewModel = TasksViewModel(ApplicationProvider.getApplicationContext())
+        tasksRepository = FakeTestRepository()
+        val task1 = Task("Title1", "Description1")
+        val task2 = Task("Title2", "Description2", true)
+        val task3 = Task("Title3", "Description3", true)
+        tasksRepository.addTasks(task1,task2, task3)
+
+        taskViewModel = TasksViewModel(tasksRepository)
     }
 
     @Test
